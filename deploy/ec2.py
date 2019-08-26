@@ -21,23 +21,7 @@ class EC2:
             MaxCount=1,
             MinCount=1
         )
-        self.update_state_file_content(response)
-
-    def update_state_file_content(self, created_instance_response):
-        if self.state_file_content.get('Green') is not None:
-            self.state_file_content['Blue'] = {}
-            self.state_file_content['Blue']['EC2'] = {
-                'InstanceId': self.state_file_content['Green']['EC2']['InstanceId'],
-            }
-        else:
-            self.state_file_content['Green'] = {}
-
-        self.state_file_content['Green']['EC2'] = {}
-        ec2_key = self.state_file_content['Green']['EC2']
-        ec2_key['InstanceId'] = created_instance_response[0].id
-        ec2_key['VPC'] = {}
-        ec2_key['VPC']['PrivateIpAddress'] = created_instance_response[0].private_ip_address
-        ec2_key['VPC']['AssociatedElasticIp'] = {}
+        self.__update_state_file_content(response)
 
     def is_instance_ready(self):
         core_ec2_client = self.ec2_resource.meta.client
@@ -58,6 +42,22 @@ class EC2:
 
     def updated_state_file_content(self):
         return self.state_file_content
+
+    def __update_state_file_content(self, created_instance_response):
+        if self.state_file_content.get('Green') is not None:
+            self.state_file_content['Blue'] = {}
+            self.state_file_content['Blue']['EC2'] = {
+                'InstanceId': self.state_file_content['Green']['EC2']['InstanceId'],
+            }
+        else:
+            self.state_file_content['Green'] = {}
+
+        self.state_file_content['Green']['EC2'] = {}
+        ec2_key = self.state_file_content['Green']['EC2']
+        ec2_key['InstanceId'] = created_instance_response[0].id
+        ec2_key['VPC'] = {}
+        ec2_key['VPC']['PrivateIpAddress'] = created_instance_response[0].private_ip_address
+        ec2_key['VPC']['AssociatedElasticIp'] = {}
 
     @staticmethod
     def __instance_is_initializing(instance_stauses_dict):
