@@ -1,2 +1,3 @@
 boto3==1.9.215
 python-dotenv==0.10.3
+Flask==0.10.1

@@ -45,22 +45,21 @@ class Deploy:
         self.file_content = ecr.updated_state_file_content()
         print('Docker container image successfully uploaded to ERC\n')
 
-        #ec2 = EC2(self.file_content)
-        #self.ec2.create_instance()
-        #self.file_content = self.ec2.updated_state_file_content()
-        #print('Green instance successfully created. Now waiting for it to be ready\n')
+        ec2 = EC2(self.file_content)
+        ec2.create_instance()
+        self.file_content = ec2.updated_state_file_content()
+        print('Green instance successfully created. Now waiting for it to be ready\n')
 
-        #if ec2.is_instance_ready():
-            #print("DANIEL")
-            #self.__alter_rds_sg_ingress()
-            #self.__associate_elastic_ip()
+        if ec2.is_instance_ready():
+            self.__alter_rds_sg_ingress()
+            self.__associate_elastic_ip()
 
-        #rollback = input('Rollback? (y/n)')
-        #if rollback == 'n':
-        #    self.__terminate_old_instance()
+        rollback = input('Rollback? (y/n)')
+        if rollback == 'n':
+            self.__terminate_old_instance()
 
-        #self.__save_file_content()
-        #self.state_file.upload_from_tmp()
+        self.__save_file_content()
+        self.state_file.upload_from_tmp()
 
     def __set_file_content(self):
         with open(StateFile.TMP_FILE_PATH, 'r') as state_file:

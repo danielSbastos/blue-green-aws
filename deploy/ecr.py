@@ -15,7 +15,7 @@ class ECR:
         self.state_file_content = state_file_content
 
     def push_image(self):
-        docker_build_command = f"docker build . -t {self.ECR_IMAGE_NAME}"
+        docker_build_command = f"docker build sample-app/ -f sample-app/Dockerfile -t {self.ECR_IMAGE_NAME}"
         docker_tag_command = f"docker tag {self.ECR_IMAGE_NAME} {self.ECR_URL}"
         ecr_login_command = f"aws ecr get-login --no-include-email --region {self.REGION} | /bin/bash"
         ecr_push_command = f"docker push {self.ECR_URL}"
