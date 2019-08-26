@@ -2,8 +2,10 @@ import os
 import json
 import subprocess
 
-from .support import Resource, Client
-from ..settings import SETTINGS
+from deploy.ec2 import EC2
+from deploy.ecr import ECR
+from deploy.support import Resource, Client
+from settings import SETTINGS
 
 
 class StateFile:
@@ -25,8 +27,6 @@ class StateFile:
 class Deploy:
     ACCOUNT_ID = SETTINGS['account_id']
     REGION = SETTINGS['region']
-    ECR_NAME = SETTINGS['ecr_name']
-    ECR_REPO_URL = f"{ACCOUNT_ID}.dkr.ecr.{REGION}.amazonaws.com/{ECR_NAME}"
 
     def __init__(self):
         self.ec2_resource = Resource.ec2()
@@ -38,24 +38,29 @@ class Deploy:
         print('State file successfully downloaded\n')
 
         self.__set_file_content()
-        print('State file content successfully set to an in memory hash\n')
+        print('State file content successfully set to an in-memory hash\n')
 
-        self.__push_docker_image()
+        ecr = ECR(self.file_content)
+        ecr.push_image()
+        self.file_content = ecr.updated_state_file_content()
         print('Docker container image successfully uploaded to ERC\n')
 
-        self.__create_instance()
-        print('Green instance successfully created. Now waiting for it to be ready\n')
+        #ec2 = EC2(self.file_content)
+        #self.ec2.create_instance()
+        #self.file_content = self.ec2.updated_state_file_content()
+        #print('Green instance successfully created. Now waiting for it to be ready\n')
 
-        if self.__instance_ready():
-            self.__alter_rds_sg_ingress()
-            self.__associate_elastic_ip()
+        #if ec2.is_instance_ready():
+            #print("DANIEL")
+            #self.__alter_rds_sg_ingress()
+            #self.__associate_elastic_ip()
 
-        rollback = input('Rollback? (y/n)')
-        if rollback == 'n':
-            self.__terminate_old_instance()
+        #rollback = input('Rollback? (y/n)')
+        #if rollback == 'n':
+        #    self.__terminate_old_instance()
 
-        self.__save_file_content()
-        self.state_file.upload_from_tmp()
+        #self.__save_file_content()
+        #self.state_file.upload_from_tmp()
 
     def __set_file_content(self):
         with open(StateFile.TMP_FILE_PATH, 'r') as state_file:
@@ -64,55 +69,6 @@ class Deploy:
     def __save_file_content(self):
         with open(StateFile.TMP_FILE_PATH, 'w') as state_file:
             json.dump(self.file_content, state_file)
-
-    def __push_docker_image(self):
-        docker_build_command = "docker build . -t daleponto"
-        docker_tag_command = f"docker tag daleponto {self.ECR_REPO_URL}"
-        ecr_login_command = f"aws ecr get-login --no-include-email --region {self.AWS_REGION} | /bin/bash"
-        ecr_push_command = f"docker push {self.ECR_REPO_URL}"
-
-        subprocess.Popen(docker_build_command, shell=True, stdout=subprocess.PIPE).stdout.read()
-        subprocess.Popen(docker_tag_command, shell=True, stdout=subprocess.PIPE).stdout.read()
-        subprocess.Popen(ecr_login_command, shell=True, stdout=subprocess.PIPE).stdout.read()
-        subprocess.Popen(ecr_push_command, shell=True, stdout=subprocess.PIPE).stdout.read()
-
-    def __create_instance(self):
-        user_data = open('deploy/data/user_data.sh', 'r').read()
-        instance = self.ec2_resource.create_instances(
-            ImageId='ami-035b3c7efe6d061d5',
-            InstanceType='t2.micro',
-            KeyName='daleponto',
-            Monitoring={
-                'Enabled': True
-            },
-            UserData=user_data,
-            MaxCount=1,
-            MinCount=1
-        )
-
-        self.old_instance_id = self.file_content['EC2']['InstanceId']
-        self.old_instance_private_ip = self.file_content['EC2']['InstanceId']
-
-        self.file_content['EC2']['Vpc']['PrivateIpAddress'] = instance[0].private_ip_address
-        self.file_content['EC2']['InstanceId'] = instance[0].id
-        self.file_content['EC2']['Vpc']['AssociatedElasticIp'] = {}
-
-    def __instance_ready(self):
-        core_ec2_client = self.ec2_resource.meta.client
-        new_instance_id = self.file_content['EC2']['InstanceId']
-
-        instance_statuses = self.__fetch_instance_statuses(core_ec2_client, new_instance_id)
-        while instance_statuses['InstanceStatuses'] == []:
-            instance_statuses = self.__fetch_instance_statuses(core_ec2_client, new_instance_id)
-
-        instance_stauses_data = self.__parse_instances_statuses(instance_statuses)
-        while self.__instance_is_initializing(instance_stauses_data):
-            instance_statuses = self.__fetch_instance_statuses(core_ec2_client, new_instance_id)
-            instance_stauses_data = self.__parse_instances_statuses(instance_statuses)
-            print("----> Instance's system_status and instance_status are still 'initializing'\n")
-
-        print("----> Instance's system_status and instance_status are now 'okay'\n")
-        return True
 
     def __alter_rds_sg_ingress(self):
         self.ec2_client.authorize_security_group_ingress(
