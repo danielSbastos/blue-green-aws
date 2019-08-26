@@ -57,7 +57,7 @@ class Deploy:
 
         rollback = input('Rollback? (y/n) ')
         if rollback == 'n':
-            self.__terminate_old_instance()
+            ec2.terminate_old_instance()
         else:
             pass # TODO
 

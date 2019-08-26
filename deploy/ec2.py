@@ -40,6 +40,11 @@ class EC2:
         print("----> Instance's system_status and instance_status are now 'okay'\n")
         return True
 
+    def terminate_old_instance(self):
+        blue_instance_id = self.state_file_content['Blue']['EC2']['InstanceId']
+        self.ec2_resource.instances.filter(InstanceIds=[blue_instance_id]).terminate()
+        print('----> Blue instance terminated\n')
+
     def updated_state_file_content(self):
         return self.state_file_content
 
@@ -76,4 +81,3 @@ class EC2:
         instance_status = instance_details[0]['Status']
 
         return { 'system_status': system_status, 'instance_status': instance_status }
-
