@@ -40,29 +40,34 @@ class EC2:
         print("----> Instance's system_status and instance_status are now 'okay'\n")
         return True
 
-    def terminate_old_instance(self):
-        blue_instance_id = self.state_file_content['Blue']['EC2']['InstanceId']
-        self.ec2_resource.instances.filter(InstanceIds=[blue_instance_id]).terminate()
-        print('----> Blue instance terminated\n')
+    def terminate_instance(self, instance_mode):
+        instance_id = self.state_file_content[instance_mode]['EC2']['InstanceId']
+        self.ec2_resource.instances.filter(InstanceIds=[instance_id]).terminate()
+        print(f"----> {instance_mode} instance terminated\n")
 
     def updated_state_file_content(self):
         return self.state_file_content
 
     def __update_state_file_content(self, created_instance_response):
-        if self.state_file_content.get('Green') is not None:
-            self.state_file_content['Blue'] = {}
-            self.state_file_content['Blue']['EC2'] = {
-                'InstanceId': self.state_file_content['Green']['EC2']['InstanceId'],
-            }
-        else:
-            self.state_file_content['Green'] = {}
+        # TODO: Only for created instance
+        green_content = self.state_file_content.get('Green')
+        blue_content = self.state_file_content.get('Blue')
 
-        self.state_file_content['Green']['EC2'] = {}
-        ec2_key = self.state_file_content['Green']['EC2']
-        ec2_key['InstanceId'] = created_instance_response[0].id
-        ec2_key['VPC'] = {}
-        ec2_key['VPC']['PrivateIpAddress'] = created_instance_response[0].private_ip_address
-        ec2_key['VPC']['AssociatedElasticIp'] = {}
+        self.state_file_content['Green'] = blue_content
+        self.state_file_content['Blue'] = green_content
+
+        green_content = self.state_file_content['Green']
+        if green_content.get('EC2') is None:
+            green_content['EC2'] = {}
+
+        green_content['EC2']['InstanceId'] = created_instance_response[0].id
+
+        if green_content['EC2'].get('VPC') is None:
+            green_content['EC2']['VPC'] = {}
+
+        green_content['EC2']['VPC']['PrivateIpAddress'] = created_instance_response[0].private_ip_address
+        green_content['EC2']['VPC']['AssociatedElasticIp'] = {}
+        self.state_file_content['Blue']['EC2']['VPC']['AssociatedElasticIp'] = {}
 
     @staticmethod
     def __instance_is_initializing(instance_stauses_dict):

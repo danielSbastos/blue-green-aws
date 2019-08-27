@@ -51,15 +51,21 @@ class Deploy:
 
         if ec2.is_instance_ready():
             vpc = VPC(self.file_content)
-            vpc.associate_elastic_ip()
+            vpc.associate_elastic_ip('Green')
             self.file_content = vpc.updated_state_file_content()
             print('Elastic IP successfully associated to green instance.')
 
         rollback = input('Rollback? (y/n) ')
         if rollback == 'n':
-            ec2.terminate_old_instance()
+            ec2.terminate_instance('Blue')
+            print('Deploy finished successfully\n')
         else:
-            pass # TODO
+            print('Rollback in process...\n')
+            print('Reattaching Elastic IP to Blue instance\n')
+            vpc.associate_elastic_ip('Blue')
+            print('Terminating Green instance\n')
+            ec2.terminate_instance('Green')
+            print('Rollback finished\n')
 
         self.__save_file_content()
         self.state_file.upload_from_tmp()

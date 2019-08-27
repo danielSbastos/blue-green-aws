@@ -7,10 +7,10 @@ class VPC:
         self.state_file_content = state_file_content
         self.ec2_client = Client.ec2()
 
-    def associate_elastic_ip(self):
-        instance_id = self.state_file_content['Green']['EC2']['InstanceId']
+    def associate_elastic_ip(self, instance_mode):
+        instance_id = self.state_file_content[instance_mode]['EC2']['InstanceId']
 
-        vpc_key = self.state_file_content['Green']['EC2']['VPC']
+        vpc_key = self.state_file_content[instance_mode]['EC2']['VPC']
         allocated_elastic_ip = vpc_key.get('AllocatedElasticIp', {}).get('AllocationId')
         associated_elastic_ip = vpc_key.get('AssociatedElasticIp', {}).get('AssociationId')
 
@@ -25,14 +25,14 @@ class VPC:
 
                 print('----> Attached an elastic IP\n')
             else:
-                self.__allocate_elastic_ip()
-                self.associate_elastic_ip()
+                self.__allocate_elastic_ip(instance_mode)
+                self.associate_elastic_ip(instance_mode)
 
     def updated_state_file_content(self):
         return self.state_file_content
 
-    def __allocate_elastic_ip(self):
-        vpc_key = self.state_file_content['Green']['EC2']['VPC']
+    def __allocate_elastic_ip(self, instance_mode):
+        vpc_key = self.state_file_content[instance_mode]['EC2']['VPC']
         allocated_elastic_ip = vpc_key.get('AllocatedElasticIp', {}).get('AllocationId')
 
         if not allocated_elastic_ip:
