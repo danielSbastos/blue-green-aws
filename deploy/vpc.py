@@ -9,9 +9,9 @@ class VPC:
 
     def associate_elastic_ip(self, instance_mode):
         instance_id = self.state_file_content[instance_mode]['EC2']['InstanceId']
+        allocated_elastic_ip = self.state_file_content.get('AllocatedElasticIp', {}).get('AllocationId')
 
         vpc_key = self.state_file_content[instance_mode]['EC2']['VPC']
-        allocated_elastic_ip = vpc_key.get('AllocatedElasticIp', {}).get('AllocationId')
         associated_elastic_ip = vpc_key.get('AssociatedElasticIp', {}).get('AssociationId')
 
         if not associated_elastic_ip:
@@ -32,14 +32,13 @@ class VPC:
         return self.state_file_content
 
     def __allocate_elastic_ip(self, instance_mode):
-        vpc_key = self.state_file_content[instance_mode]['EC2']['VPC']
-        allocated_elastic_ip = vpc_key.get('AllocatedElasticIp', {}).get('AllocationId')
+        allocated_elastic_ip = self.state_file_content.get('AllocatedElasticIp', {}).get('AllocationId')
 
         if not allocated_elastic_ip:
             response = self.ec2_client.allocate_address(Domain='vpc')
-            vpc_key['AllocatedElasticIp'] = {}
-            vpc_key['AllocatedElasticIp']['PublicIp'] = response['PublicIp']
-            vpc_key['AllocatedElasticIp']['AllocationId'] = response['AllocationId']
+            self.state_file_content['AllocatedElasticIp'] = {}
+            self.state_file_content['AllocatedElasticIp']['PublicIp'] = response['PublicIp']
+            self.state_file_content['AllocatedElasticIp']['AllocationId'] = response['AllocationId']
 
             print('----> Allocated an elastic IP\n')
         else:

@@ -51,23 +51,15 @@ class EC2:
     def __update_state_file_content(self, created_instance_response):
         # TODO: Only for created instance
         green_content = self.state_file_content.get('Green')
-        blue_content = self.state_file_content.get('Blue')
 
-        self.state_file_content['Green'] = blue_content
+        self.state_file_content['Green'] = {}
         self.state_file_content['Blue'] = green_content
 
         green_content = self.state_file_content['Green']
-        if green_content.get('EC2') is None:
-            green_content['EC2'] = {}
-
+        green_content['EC2'] = {}
         green_content['EC2']['InstanceId'] = created_instance_response[0].id
-
-        if green_content['EC2'].get('VPC') is None:
-            green_content['EC2']['VPC'] = {}
-
-        green_content['EC2']['VPC']['PrivateIpAddress'] = created_instance_response[0].private_ip_address
+        green_content['EC2']['VPC'] = {}
         green_content['EC2']['VPC']['AssociatedElasticIp'] = {}
-        self.state_file_content['Blue']['EC2']['VPC']['AssociatedElasticIp'] = {}
 
     @staticmethod
     def __instance_is_initializing(instance_stauses_dict):

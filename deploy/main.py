@@ -58,13 +58,22 @@ class Deploy:
         rollback = input('Rollback? (y/n) ')
         if rollback == 'n':
             ec2.terminate_instance('Blue')
+            del self.file_content['Blue']
             print('Deploy finished successfully\n')
         else:
             print('Rollback in process...\n')
             print('Reattaching Elastic IP to Blue instance\n')
+            self.file_content['Blue']['EC2']['VPC']['AssociatedElasticIp']['AssociationId'] = None
             vpc.associate_elastic_ip('Blue')
+            self.file_content = vpc.updated_state_file_content()
+
             print('Terminating Green instance\n')
             ec2.terminate_instance('Green')
+            self.file_content = ec2.updated_state_file_content()
+
+            del self.file_content['Green']
+            self.file_content['Green'] = self.file_content['Blue']
+            del self.file_content['Blue']
             print('Rollback finished\n')
 
         self.__save_file_content()
