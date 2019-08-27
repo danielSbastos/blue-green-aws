@@ -87,6 +87,3 @@ class Deploy:
     def __save_file_content(self):
         with open(StateFile.TMP_FILE_PATH, 'w') as state_file:
             json.dump(self.file_content, state_file)
-
-if __name__ == "__main__":
-    Deploy().execute()
