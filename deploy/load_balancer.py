@@ -28,5 +28,13 @@ class LoadBalancer:
             'DNSName': response['DNSName']
         }
 
+    def instances_healthy(self):
+        response = self.load_balancer_client.describe_instance_health(
+            LoadBalancerName=self.state_file_content['LoadBalancer']['Name']
+        )
+        while not all(s['State'] == 'InService' for s in response['InstanceStates']):
+            return self.instances_healthy()
+        return True
+
     def updated_state_file_content(self):
         return self.state_file_content

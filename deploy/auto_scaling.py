@@ -9,14 +9,36 @@ class AutoScaling:
         self.auto_scaling_client = Client.auto_scaling()
         self.state_file_content = state_file_content
 
-    def delete_auto_scaling_group(self):
+    def enter_standby(self, instances_ids, green_blue):
+        response = self.auto_scaling_client.enter_standby(
+            AutoScalingGroupName=self.state_file_content[green_blue]['AutoScaling']['GroupName'],
+            InstanceIds=instances_ids,
+            ShouldDecrementDesiredCapacity=False
+        )
+        self.state_file_content[green_blue]['AutoScaling']['InstancesInStandBy'] = instances_ids
+
+    def exit_standby(self, instances_ids, green_blue):
+        response = self.auto_scaling_client.exit_standby(
+            AutoScalingGroupName=self.state_file_content[green_blue]['AutoScaling']['GroupName'],
+            InstanceIds=instances_ids,
+        )
+        self.state_file_content[green_blue]['AutoScaling']['InstancesInStandBy'] = []
+
+    def delete_auto_scaling_group(self, green_blue):
         self.auto_scaling_client.delete_auto_scaling_group(
-            AutoScalingGroupName=self.state_file_content['AutoScaling']['GroupName'],
+            AutoScalingGroupName=self.state_file_content[green_blue]['AutoScaling']['GroupName'],
             ForceDelete=True
         )
 
+    def instances_ids(self, green_blue):
+        response = self.auto_scaling_client.describe_auto_scaling_groups(
+            AutoScalingGroupNames=[self.state_file_content[green_blue]['AutoScaling']['GroupName']]
+        )
+
+        return list(map(lambda i: i['InstanceId'], response['AutoScalingGroups'][0]['Instances']))
+
     def create_auto_scaling_group(self):
-        name = 'daniel-test-auto-scaling' + time.strftime('%d-%m-%y--%M-%H-%S')
+        name = 'daniel-test-auto-scaling' + time.strftime('%d-%m-%y--%H-%M-%S')
         response = self.auto_scaling_client.create_auto_scaling_group(
             AutoScalingGroupName=name,
             LaunchConfigurationName=self.state_file_content['LaunchConfiguration']['Name'],
@@ -27,7 +49,9 @@ class AutoScaling:
                 self.state_file_content['LoadBalancer']['Name'],
             ],
         )
-        self.state_file_content['AutoScaling'] = {'GroupName': name}
+        self.state_file_content['Blue'] = self.state_file_content.get('Green', {})
+        self.state_file_content['Green'] = {}
+        self.state_file_content['Green']['AutoScaling'] = {'GroupName': name}
 
     def create_launch_configuration(self):
         user_data = open('sample-app/user_data.sh', 'r').read()

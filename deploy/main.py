@@ -1,6 +1,7 @@
 import os
 import json
 import subprocess
+import time
 
 from deploy.ec2 import EC2
 from deploy.ecr import ECR
@@ -48,19 +49,36 @@ class Deploy:
         self.create_auto_caling_group()
         print('Auto scaling group successfully created. Now waiting for it to be ready\n')
 
-        #if ec2.is_instance_ready():
-        #    vpc = VPC(self.file_content)
-        #    vpc.associate_elastic_ip('Green')
-        #    self.file_content = vpc.updated_state_file_content()
-        #    print('Elastic IP successfully associated to green instance.')
+        time.sleep(100)
 
-        #rollback = input('Rollback? (y/n) ')
-        #if rollback == 'n':
-        #    ec2.terminate_instance('Blue')
-        #    del self.file_content['Blue']
-        #    print('Deploy finished successfully\n')
-        #else:
-        #    self.rollback()
+        lb = LoadBalancer(self.file_content)
+        if lb.instances_healthy():
+            auto_scaling = AutoScaling(self.file_content)
+            instances_ids = auto_scaling.instances_ids('Blue')
+            auto_scaling.enter_standby(instances_ids, 'Blue')
+            self.file_content = auto_scaling.updated_state_file_content()
+            print('Green auto scaling group is now ready. Blue one has entered standby mode\n')
+
+        rollback = input('Rollback? (y/n) ')
+        if rollback == 'n':
+            auto_scaling = AutoScaling(self.file_content)
+            auto_scaling.delete_auto_scaling_group('Blue')
+            del self.file_content['Blue']
+            print('Deploy finished successfully\n')
+        else:
+            print('Rollback in process...\n')
+            auto_scaling = AutoScaling(self.file_content)
+            standby_instaces_ids = self.file_content['Blue']['AutoScaling']['InstancesInStandBy']
+            auto_scaling.exit_standby(standby_instaces_ids, 'Blue')
+            auto_scaling.delete_auto_scaling_group('Green')
+            self.file_content = auto_scaling.updated_state_file_content()
+
+            del self.file_content['Green']
+            blue = self.file_content['Blue']
+            self.file_content['Green'] = blue
+            del self.file_content['Blue']
+
+            print('Rollback finished\n')
 
         self.__save_file_content()
         self.state_file.upload_from_tmp()
@@ -84,20 +102,9 @@ class Deploy:
         self.file_content = launch_config.updated_state_file_content()
 
     def rollback(self):
-        print('Rollback in process...\n')
-        print('Reattaching Elastic IP to Blue instance\n')
-        self.file_content['Blue']['EC2']['VPC']['AssociatedElasticIp']['AssociationId'] = None
-        vpc.associate_elastic_ip('Blue')
-        self.file_content = vpc.updated_state_file_content()
-
-        print('Terminating Green instance\n')
-        ec2.terminate_instance('Green')
-        self.file_content = ec2.updated_state_file_content()
-
         del self.file_content['Green']
         self.file_content['Green'] = self.file_content['Blue']
         del self.file_content['Blue']
-        print('Rollback finished\n')
 
     def __set_file_content(self):
         with open(StateFile.TMP_FILE_PATH, 'r') as state_file:
