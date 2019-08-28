@@ -27,7 +27,6 @@ class AutoScaling:
        response = self.auto_scaling_client.exit_standby(
            AutoScalingGroupName=self.state_file_content[green_blue]['AutoScaling']['GroupName'],
            InstanceIds=instances_ids,
-           ShouldDecrementDesiredCapacity=False
        )
        self.state_file_content[green_blue]['AutoScaling']['InstancesInStandBy'] = []
 
