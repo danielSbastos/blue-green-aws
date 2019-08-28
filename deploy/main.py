@@ -46,7 +46,7 @@ class Deploy:
 
         self.create_launch_configuration()
         self.create_load_balancer()
-        self.create_auto_caling_group()
+        self.create_auto_scaling_group()
         print('Auto scaling group successfully created. Now waiting for it to be ready\n')
 
         time.sleep(100)
@@ -55,6 +55,7 @@ class Deploy:
         if lb.instances_healthy():
             auto_scaling = AutoScaling(self.file_content)
             instances_ids = auto_scaling.instances_ids('Blue')
+            auto_scaling.decrease_min_size('Blue')
             auto_scaling.enter_standby(instances_ids, 'Blue')
             self.file_content = auto_scaling.updated_state_file_content()
             print('Green auto scaling group is now ready. Blue one has entered standby mode\n')
@@ -96,7 +97,7 @@ class Deploy:
             launch_config.create_launch_configuration()
             self.file_content = launch_config.updated_state_file_content()
 
-    def create_auto_caling_group(self):
+    def create_auto_scaling_group(self):
         launch_config = AutoScaling(self.file_content)
         launch_config.create_auto_scaling_group()
         self.file_content = launch_config.updated_state_file_content()

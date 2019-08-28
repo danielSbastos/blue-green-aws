@@ -1,5 +1,7 @@
 from deploy.support import Resource, Client
 
+import time
+
 
 class LoadBalancer:
 
@@ -33,6 +35,7 @@ class LoadBalancer:
             LoadBalancerName=self.state_file_content['LoadBalancer']['Name']
         )
         while not all(s['State'] == 'InService' for s in response['InstanceStates']):
+            time.sleep(30)
             return self.instances_healthy()
         return True
 
