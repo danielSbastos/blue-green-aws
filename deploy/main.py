@@ -28,7 +28,7 @@ class Deploy:
         if lb.instances_healthy():
             auto_scaling = AutoScaling(self.file_content)
             instances_ids = auto_scaling.instances_ids('Blue')
-            auto_scaling.decrease_min_size('Blue')
+            auto_scaling.change_min_size(0, 'Blue')
             auto_scaling.enter_standby(instances_ids, 'Blue')
             self.file_content = auto_scaling.updated_state_file_content()
             print('Green auto scaling group is now ready. Blue one has entered standby mode\n')
@@ -50,6 +50,8 @@ class Deploy:
         print('Rollback in process...\n')
         auto_scaling = AutoScaling(self.file_content)
         standby_instaces_ids = self.file_content['Blue']['AutoScaling']['InstancesInStandBy']
+
+        auto_scaling.change_min_size(1, 'Blue')
         auto_scaling.exit_standby(standby_instaces_ids, 'Blue')
         auto_scaling.delete_auto_scaling_group('Green')
         self.file_content = auto_scaling.updated_state_file_content()

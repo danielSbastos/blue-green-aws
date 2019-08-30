@@ -59,10 +59,10 @@ class AutoScaling:
         self.state_file_content['Green'] = {}
         self.state_file_content['Green']['AutoScaling'] = {'GroupName': name}
 
-    def decrease_min_size(self, green_blue):
+    def change_min_size(self, size, green_blue):
         self.auto_scaling_client.update_auto_scaling_group(
             AutoScalingGroupName=self.state_file_content[green_blue]['AutoScaling']['GroupName'],
-            MinSize=0
+            MinSize=size
         )
 
     def create_launch_configuration(self):
